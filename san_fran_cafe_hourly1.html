@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset='utf-8' />
+<title>Display a map</title>
+<meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+<script src='mapbox-gl.js'></script>
+<link href='mapbox-gl.css' rel='stylesheet' />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,700&display=swap" rel="stylesheet">
+
+<style>
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+h2{
+  margin: 8px;
+  font-size: 1.2em;
+}
+
+,
+h3 {
+  margin: 10px;
+  font-size: 1.2em;
+}
+
+h3 {
+  margin: 10px;
+  font-size: .85em;
+}
+
+p {
+  font-size: 0.85em;
+  margin: 10px;
+  text-align: left;
+  font-weight: 'lighter';
+}
+
+/**
+* Create a position for the map
+* on the page */
+#map {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+}
+
+/**
+* Set rules for how the map overlays
+* (information box and legend) will be displayed
+* on the page. */
+.map-overlay {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(40, 40, 40, 0.9);
+  margin-right: 20px;
+  font-family: 'Open Sans', sans-serif;
+  font-weight: 'normal';
+  overflow: auto;
+  border-radius: 3px;
+}
+
+.map-overlay2 {
+  position: absolute;
+  bottom: 0;
+  left: 10;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(40, 40, 40, 0.9);
+  margin-left: 20px;
+  font-family: 'Open Sans', sans-serif;
+  font-weight: 'lighter';
+  overflow: auto;
+  border-radius: 3px;
+}
+
+#features {
+  top: 0;
+  box-shadow: 0 1px 2px rgba(255, 255, 255, 0.4);
+  height: 120px;
+  margin-top: 20px;
+  width: 250px;
+}
+
+#slider-feature {
+  padding: 10px;
+  box-shadow: 0 1px 2px rgba(255, 255, 255, 0.4);
+  height: 100px;
+  margin-bottom: 40px;
+  width: 345px;
+}
+
+#legend {
+  padding: 10px;
+  box-shadow: 0 1px 2px rgba(255, 255, 255, 0.4);
+  line-height: 18px;
+  height: 100px;
+  margin-bottom: 40px;
+  font-size: 0.85em;
+  font-weight:"lighter"
+  width: 85px;
+}
+
+.legend-key {
+  display: inline-block;
+  border-radius: 20%;
+  width: 10px;
+  height: 10px;
+  margin-right: 5px;
+}
+.button {
+  background-color: #008CBA;
+  border: none;
+  color: white;
+  padding: 10px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  margin: 4px 2px;
+  cursor: pointer;
+}
+
+.button1 {border-radius: 2px;}
+.button2 {border-radius: 4px;}
+.button3 {border-radius: 8px;}
+.button4 {border-radius: 12px;}
+.button5 {border-radius: 50%;}
+
+</style>
+</head>
+<body>
+
+<div id='map'></div>
+<div class='map-overlay' id='features'><h2>San Francisco Cafes</h2><div id ='municipality'></div><div id='pd'>
+
+<p id="changeMe">Hover Over a Cafe for Info</p>
+<script>
+if (navigator.userAgent.match(/Mobile/)) {
+document.getElementById('changeMe').innerHTML = 'Touch a Cafe for Info';
+}
+</script>
+</div><div id ='municipality'></div></div>
+<div class='map-overlay' id='legend'><strong>Visitors</strong><p></p></div>
+
+<div class='map-overlay2' id='slider-feature'>
+<h2>Hours of the Day</h2>
+<label for='slider'>Hour</label>
+<input id='slider' type='range' list="tickmarks" min='1' max='24' step='1' value='1' >
+<output for="slider" id="Election">1:00</output>
+<button class="button button4" onclick="Advance()">Play</button>
+<button class="button button4" onclick="StopFunction()">Stop</button>
+</div>
+
+
+
+<script>
+var zoom_num = null
+var Hour = "1"
+
+function outputUpdate(hr) {
+	document.querySelector('#Election').value = hr.concat(':00');
+}
+
+mapboxgl.accessToken = 'pk.eyJ1Ijoiamprb2hlciIsImEiOiJjanhtM3JncHIwMjY4M3BtbXV0Z2dvZzg0In0._o4vt3R-MDgSonaoHMmk8w';
+var map = new mapboxgl.Map({
+container: 'map', // container id
+style: 'mapbox://styles/jjkoher/ck1cq10eg1lsp1dsamkcd7atm', // stylesheet location
+center: [-122.434, 37.757], // starting position [lng, lat]
+
+
+zoom: mobile_detect() // starting zoom
+});
+
+var hoveredStateId =  null;
+var layers = ['0', '250', '500','750+'];
+var colors = [
+	"hsl(239, 97%, 69%)",
+    "hsl(139, 99%, 40%)",
+    "hsl(29, 100%, 51%)",
+    "hsl(358, 93%, 47%)"
+  ];
+
+map.on('load', function(){
+map.addSource('cafes', {
+'type': 'vector',
+'url': 'mapbox://jjkoher.8y3jlddy'
+//'generateId': true
+});
+
+
+map.addLayer({
+'id': 'cafe_loc',
+'source': 'cafes',
+'source-layer': 'locations',
+'type': 'circle',
+'paint': {
+'circle-radius':
+['match', ['feature-state', 'change_hour'],
+"1", createSize("1"),
+"2", createSize("2"),
+"3", createSize("3"),
+"4", createSize("4"),
+"5", createSize("5"),
+"6", createSize("6"),
+"7", createSize("7"),
+"8", createSize("8"),
+"9", createSize("9"),
+"10", createSize("10"),
+"11", createSize("11"),
+"12", createSize("12"),
+"13", createSize("13"),
+"14", createSize("14"),
+"15", createSize("15"),
+"16", createSize("16"),
+"17", createSize("17"),
+"18", createSize("18"),
+"19", createSize("19"),
+"20", createSize("20"),
+"21", createSize("21"),
+"22", createSize("22"),
+"23", createSize("23"),
+"24", createSize("24"),
+createSize("1")
+],
+'circle-color': ["case",
+["boolean", ["feature-state", "hover"], false],
+'hsl(49, 80%, 59%)',
+['match', ['feature-state', 'change_hour'],
+"1", createFillColor("1"),
+"2", createFillColor("2"),
+"3", createFillColor("3"),
+"4", createFillColor("4"),
+"5", createFillColor("5"),
+"6", createFillColor("6"),
+"7", createFillColor("7"),
+"8", createFillColor("8"),
+"9", createFillColor("9"),
+"10", createFillColor("10"),
+"11", createFillColor("11"),
+"12", createFillColor("12"),
+"13", createFillColor("13"),
+"14", createFillColor("14"),
+"15", createFillColor("15"),
+"16", createFillColor("16"),
+"17", createFillColor("17"),
+"18", createFillColor("18"),
+"19", createFillColor("19"),
+"20", createFillColor("20"),
+"21", createFillColor("21"),
+"22", createFillColor("22"),
+"23", createFillColor("23"),
+"24", createFillColor("24"),
+createFillColor("1")
+]],
+"circle-opacity": ["case",
+["boolean", ["feature-state", "hover"], false],
+1,
+.9
+],
+"circle-stroke-width":
+["case",
+["boolean", ["feature-state", "hover"], false],1,0.1],
+"circle-stroke-color": 
+["case",
+["boolean", ["feature-state", "hover"], false],
+"rgb(255, 255, 255)",  
+"rgb(0, 0, 0)"]
+}
+}, 'waterway-label');
+
+
+
+for (i = 0; i < layers.length; i++) {
+  var layer = layers[i];
+  var color = colors[i];
+  var item = document.createElement('div');
+  var key = document.createElement('span');
+  key.className = 'legend-key';
+  key.style.backgroundColor = color;
+
+  var value = document.createElement('span');
+  value.innerHTML = layer;
+  item.appendChild(key);
+  item.appendChild(value);
+  legend.appendChild(item);
+}
+
+});
+map.getCanvas().style.cursor = 'default';
+
+
+function mobile_detect() {
+
+if (navigator.userAgent.match(/Mobile/)) {return 11;
+}
+else {
+return 12;
+}
+}
+
+
+function createFillColor(hour) {
+	return   [
+    "interpolate",
+    ["linear"],
+    ["get", hour],
+    0,
+    "hsl(239, 97%, 69%)",
+    250,
+    "hsl(139, 99%, 40%)",
+    500,
+    "hsl(29, 100%, 51%)",
+    750,
+    "hsl(358, 93%, 47%)"
+  ];
+}
+
+function createSize(hour) {
+	return[
+  "interpolate",
+  ["linear"],
+  ["get", hour],
+  0,
+  1,
+  50,
+  5,
+  750,
+  25
+];
+}
+
+
+//function load_map(Hour) {
+//map.setPaintProperty('votemap', 'fill-color', createFillColor(Hour));
+//}
+
+function ChangeLayer() {
+	console.log(Hour);
+    highlightedFeatures = map.querySourceFeatures('cafes', {
+      sourceLayer: 'locations'
+    }); 
+
+    highlightedFeatures.forEach(function(f) { 
+ map.setFeatureState({
+		source: 'cafes',
+        sourceLayer: 'locations',
+        id: f.id
+      }, {
+        change_hour: Hour
+      });
+ });
+}
+
+document.getElementById('slider').addEventListener('input', function(e) {
+Hour = e.target.value
+outputUpdate(Hour)
+ChangeLayer(Hour) 
+console.log(Hour, "It better change")
+//load_map(Year_pct, Year)
+textEvent();
+});
+
+document.getElementById('slider').addEventListener('input', function(e) {
+Hour = e.target.value
+outputUpdate(Hour)
+//console.log(Hour)
+//load_map(Hour);
+});
+
+
+var time_step;
+
+function Advance() {
+  time_step = setInterval(Step, 500);
+}
+
+function Step() {
+  if (parseInt(document.getElementById('slider').value)< 24) {
+  document.getElementById('slider').value=(String(parseInt(document.getElementById('slider').value)+1));
+  document.getElementById('slider').dispatchEvent(new Event('input'))
+  console.log("It worked");
+  } else {
+  document.getElementById('slider').value="1";
+  document.getElementById('slider').dispatchEvent(new Event('input'))
+  }
+}
+
+function StopFunction() {
+  clearInterval(time_step);
+}
+//document.getElementById('slider').value
+//document.getElementById('slider').dispatchEvent(new Event('input'))
+
+// https://gist.github.com/SonyaMoisset/aa79f51d78b39639430661c03d9b1058#file-title-case-a-sentence-for-loop-wc-js
+var toTitleCase = function (str) {
+	str = str.toLowerCase().split(' ');
+	for (var i = 0; i < str.length; i++) {
+		str[i] = str[i].charAt(0).toUpperCase() + str[i].slice(1);
+	}
+	return str.join(' ');
+};
+
+
+var mouseLocation = null
+map.on('mousemove', function(e) {
+  mouseLocation = e.point
+  textEvent()
+
+});
+  
+
+
+function textEvent() {
+  var cafe = map.queryRenderedFeatures(mouseLocation, {
+    layers: ['cafe_loc']
+  });
+  if (cafe.length > 0) {
+    document.getElementById('pd').innerHTML = '<h3><strong>' + cafe[0].properties.Name + '<br>' + cafe[0].properties[Hour] + '</h3></strong><p>' + 
+	'</p><p style="color:hsla(41, 100%, 82%, 1)"><strong><em>' + 
+	'</strong> Recorded Visits</em></p>';
+
+  } else {
+    document.getElementById('pd').innerHTML = '<p id="changeMe">Hover Over a Cafe for Info</p>'
+	if (navigator.userAgent.match(/Mobile/)) {
+document.getElementById('changeMe').innerHTML = 'Touch a Cafe for Info';
+}
+	;
+  }
+};
+
+
+
+
+
+
+
+// When the user moves their mouse over the state-fill layer, we'll update the
+// feature state for the feature under the mouse.
+map.on("mousemove", "cafe_loc", function(e) {
+if (e.features.length > 0) {
+if (hoveredStateId) {
+map.setFeatureState({source: 'cafes', sourceLayer:'locations', id: hoveredStateId}, { hover: false});
+}
+hoveredStateId = e.features[0].id;
+map.setFeatureState({source: 'cafes', sourceLayer:'locations', id: hoveredStateId}, { hover: true});
+}
+});
+ 
+// When the mouse leaves the state-fill layer, update the feature state of the
+// previously hovered feature.
+map.on("mouseleave", "cafe_loc", function() {
+if (hoveredStateId) {
+map.setFeatureState({source: 'cafes', sourceLayer:'locations', id: hoveredStateId}, { hover: false});
+}
+hoveredStateId =  null;
+});
+
+</script> 
+ 
+ 
+</body>
+</html>
