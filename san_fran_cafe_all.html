@@ -145,7 +145,7 @@ document.getElementById('changeMe').innerHTML = 'Touch a Cafe for Info';
 }
 </script>
 </div><div id ='municipality'></div></div>
-<div class='map-overlay' id='legend'><strong>Visitors</strong><p></p></div>
+<div class='map-overlay' id='legend'><strong>Status</strong><p></p></div>
 
 <div class='map-overlay2' id='slider-feature'>
 <h2>Hours of the Day</h2>
@@ -177,11 +177,10 @@ zoom: mobile_detect() // starting zoom
 });
 
 var hoveredStateId =  null;
-var layers = ['0', '250', '500','750+'];
+var layers = ['Open', 'Closed'];
 var colors = [
-	"hsl(239, 97%, 69%)",
+
     "hsl(139, 99%, 40%)",
-    "hsl(29, 100%, 51%)",
     "hsl(358, 93%, 47%)"
   ];
 
@@ -468,9 +467,8 @@ function textEvent() {
     layers: ['cafe_loc']
   });
   if (cafe.length > 0) {
-    document.getElementById('pd').innerHTML = '<h3><strong>' + cafe[0].properties.Name + '<br>' + cafe[0].properties[Hour] + '</h3></strong><p>' + 
-	'</p><p style="color:hsla(41, 100%, 82%, 1)"><strong><em>' + 
-	'</strong> Recorded Visits</em></p>';
+    document.getElementById('pd').innerHTML = '<h3><strong>' + cafe[0].properties.Name + '</h3></strong>' + '<p style="color:hsla(41, 100%, 82%, 1)"><strong><em>' +
+	cafe[0].properties[Hour] + 	'</strong> Recorded Visits</em></p>';
 
   } else {
     document.getElementById('pd').innerHTML = '<p id="changeMe">Hover Over a Cafe for Info</p>'
